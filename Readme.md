@@ -14,11 +14,15 @@ Miro https://miro.com/app/board/uXjVMxQR4GM=/?share_link_id=748782069026
 - Command — Create task
 - Data — Task, Task.Description, Task.Status User (any except manager or admin), User.Role, Price
 - Event — Task.Created
-	 
+
+</br>
+
 - Actor — Task.Created event
 - Command — Get Random User
 - Data — User (any except manager or admin)
 - Event — User.Selected
+
+</br>
 
 - Actor — User.Selected event
 - Command — Assign task to user
@@ -33,13 +37,13 @@ a) Ассайнить задачу можно на кого угодно (кро
 - Actor — User. Manager or Admin
 - Command — AssignTasks
 - Data — Tasks with Status.Open, Users with Role != Manager or Admin
-- Events — Task.Assigned for each Task
+- Events — Task.Assigned
 
 c) При нажатии кнопки «заассайнить задачи» все текущие не закрытые задачи должны быть случайным образом перетасованы между каждым аккаунтом в системе
 - Actor — User. Manager or Admin
-- Command — AssignTasks
+- Command — ReassignTasks
 - Data — Tasks with Status.Open, Users with Role != Manager or Admin
-- Events — Task.Assigned for each Task
+- Events — Task.Reassigned for each Task
 
 6. Каждый сотрудник должен иметь возможность видеть в отдельном месте список заассайненных на него задач + отметить задачу выполненной.
 
@@ -47,6 +51,8 @@ c) При нажатии кнопки «заассайнить задачи» в
 - Command — GetAssignedToMeTasks
 - Data — Tasks with Status.Open and Assigned = current_user
 - Events — --
+
+</br>
 
 - Actor — User
 - Command — CompleteTask
@@ -76,6 +82,8 @@ a) у обычных попугов доступ к аккаунтингу то�
 - Data — Task.Id, Task.Description, Task.Price, User
 - Events — AuditLog.ItemCreated
 
+</br>
+
 - Actor — Account.Paid event
 - Command — Create AuditLog item
 - Data — Task.Id, Task.Description, Task.Price, User
@@ -83,50 +91,63 @@ a) у обычных попугов доступ к аккаунтингу то�
 
 4. Цены на задачу определяется единоразово, в момент появления в системе (можно с минимальной задержкой). Цены рассчитываются без привязки к сотруднику
 
-	- Actor — Task.Created event
-	- Command — CreatePricesForTask
-	- Data — Task.Id, Price
-	- Events — Price.Created
+- Actor — Task.Created event
+- Command — CreatePricesForTask
+- Data — Task.Id, Price
+- Events — Price.Created  
 
+</br>
 	Деньги списываются сразу после ассайна на сотрудника, а начисляются после выполнения задачи.
 
-	- Actor — Task.Assigned event
-	- Command — ChargeTaskCost
-	- Data — Price, User
-	- Events — Account.Charged
+</br>
+
+- Actor — Task.Assigned event
+- Command — ChargeTaskCost
+- Data — Price, User
+- Events — Account.Charged
 	
-	- Actor — Task.Completed event
-	- Command — PayTaskCost
-	- Data — Price, User
-	- Events — Account.Paid
+</br>
+
+- Actor — Task.Completed event
+- Command — PayTaskCost
+- Data — Price, User
+- Events — Account.Paid
 
 
 6. В конце дня необходимо:
-	- считать сколько денег сотрудник получил за рабочий день
+- считать сколько денег сотрудник получил за рабочий день
 
-	- Actor — System cron
-	- Command — CloseDay
-	- Data — Account, User (или AuditLog, зависит от реализации)
-	- Events — DayClosed
+</br>
 
-	- отправлять на почту сумму выплаты
-	
-	- Actor — DayClosed event
-	- Command — SendDailySum
-	- Data — AuditLog
-	- Events — DailySumSent
+- Actor — System cron
+- Command — CloseDay
+- Data — Account, User (или AuditLog, зависит от реализации)
+- Events — DayClosed
+
+</br>
+
+- отправлять на почту сумму выплаты
+
+</br>
+
+- Actor — DayClosed event
+- Command — SendDailySum
+- Data — AuditLog
+- Events — DailySumSent
 
 7. После выплаты баланса (в конце дня) он должен обнуляться, и в аудитлоге всех операций аккаунтинга должно быть отображено, что была выплачена сумма.
 
-	- Actor — DayClosed event
-	- Command — FlushAccountBalance
-	- Data — Account
-	- Events — Account.Flushed
+- Actor — DayClosed event
+- Command — FlushAccountBalance
+- Data — Account
+- Events — Account.Flushed
 
-	- Actor — Account.Flushed event
-	- Command — Create AuditLog item
-	- Data — AuditLog
-	- Events — Account.Flushed
+</br>
+
+- Actor — Account.Flushed event
+- Command — Create AuditLog item
+- Data — AuditLog
+- Events — Account.Flushed
 
 ### Analytics
 1. Аналитика — это отдельный дашборд, доступный только админам.
