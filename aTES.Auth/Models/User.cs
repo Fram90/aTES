@@ -11,11 +11,3 @@ public class PopugUser
     public string PasswordHash { get; set; }
     public string Email { get; set; }
 }
-
-public enum PopugRoles
-{
-    Worker,
-    Manager,
-    Admin,
-    Accounter
-}

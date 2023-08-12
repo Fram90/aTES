@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using aTES.TaskTracker.Db;
 using aTES.TaskTracker.Domain;
 using aTES.TaskTracker.Domain.Services;
+using aTES.TaskTracker.Kafka;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -14,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("TaskTrackerConnection") ??
                        throw new InvalidOperationException("Connection string 'AuthConnection' not found.");
+
 var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
 dataSourceBuilder.MapEnum<TaskState>();
 var dataSource = dataSourceBuilder.Build();
@@ -27,6 +29,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddMvc()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -53,28 +56,12 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 
 builder.Services.AddScoped<IPriceProvider, PriceProvider>();
 builder.Services.AddScoped<IPopugSelector, RandomPopugSelector>();
+builder.Services.AddKafkaServices();
+builder.Services.AddConsumers();
 
 var app = builder.Build();
 
-
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<TaskTrackerDbContext>();
-    context.Database.Migrate();
-
-    if (context.Database.GetDbConnection() is NpgsqlConnection npgsqlConnection)
-    {
-        await npgsqlConnection.OpenAsync();
-        try
-        {
-            await npgsqlConnection.ReloadTypesAsync();
-        }
-        finally
-        {
-            await npgsqlConnection.CloseAsync();
-        }
-    }
-}
+await DatabaseInitializer.Init(app);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

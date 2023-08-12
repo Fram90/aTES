@@ -5,13 +5,6 @@ using Task = aTES.TaskTracker.Domain.Task;
 
 namespace aTES.TaskTracker.Db;
 
-public class User
-{
-    public int Id { get; set; }
-    public Guid PublicId { get; set; }
-    public string Role { get; set; }
-}
-
 public class TaskTrackerDbContext : DbContext
 {
     public DbSet<Task> Tasks { get; set; }

@@ -5,13 +5,22 @@ using System.Security.Cryptography;
 using System.Text;
 using aTES.Auth.ActionFilters;
 using aTES.Auth.Data;
+using aTES.Auth.Kafka;
 using aTES.Auth.Models;
+using aTES.Auth.Models.Dtos;
+using Confluent.Kafka;
 using JWT.Algorithms;
 using JWT.Builder;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
+using Npgsql;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
 
 namespace aTES.Auth.Controllers;
@@ -22,11 +31,14 @@ public class AuthController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly KafkaDependentProducer<Null, string> _producer;
 
-    public AuthController(ApplicationDbContext context, IConfiguration configuration)
+    public AuthController(ApplicationDbContext context, IConfiguration configuration,
+        KafkaDependentProducer<Null, string> producer)
     {
         _context = context;
         _configuration = configuration;
+        _producer = producer;
     }
 
     [HttpPost("register")]
@@ -44,26 +56,46 @@ public class AuthController : ControllerBase
         };
 
         _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-        //todo тут публикуем событие user created
 
-        return StatusCode(201);
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException e) when(e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            return BadRequest("User with same email already exists");
+        }
+
+        var serializerSettings = new JsonSerializerSettings();
+        serializerSettings.Converters.Add(new StringEnumConverter(new DefaultNamingStrategy(), false));
+
+        await _producer.ProduceAsync("stream-user-created",
+            new Message<Null, string>()
+                { Value = JsonConvert.SerializeObject(user, serializerSettings) });
+
+        return Ok(user);
     }
 
     [HttpPost("changeRole")]
     [ValidationFilter]
     public async Task<IActionResult> ChangeRole([FromBody] ChangeRoleDto model)
     {
-        var user = _context.Users.FirstOrDefault(x => x.Name == model.UserName);
+        var user = _context.Users.FirstOrDefault(x => x.Email == model.Email);
         if (user == null)
         {
-            return Unauthorized();
+            return NotFound();
         }
 
+        user.Role = model.NewRole;
         await _context.SaveChangesAsync();
 
-        //todo тут публикуем событие userChanged
-        return StatusCode(201);
+        var serializerSettings = new JsonSerializerSettings();
+        serializerSettings.Converters.Add(new StringEnumConverter(new DefaultNamingStrategy(), false));
+        
+        await _producer.ProduceAsync("stream-user-role-changed",
+            new Message<Null, string>() { Value = JsonConvert.SerializeObject(user, serializerSettings) });
+
+        return Ok(user);
     }
 
     [HttpPost("authenticate")]
@@ -114,13 +146,5 @@ public class AuthController : ControllerBase
         var jwtToken = tokenHandler.WriteToken(token);
 
         return Ok(jwtToken);
-    }
-
-    [HttpGet("TestApiAuth")]
-    [Authorize]
-    public async Task<IActionResult> TestApiAuth()
-    {
-        var user = User.Identity;
-        return NoContent();
     }
 }
