@@ -7,6 +7,7 @@ using aTES.TaskTracker.Kafka;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -60,6 +61,7 @@ builder.Services.AddKafkaServices();
 builder.Services.AddConsumers();
 
 var app = builder.Build();
+
 
 await DatabaseInitializer.Init(app);
 
