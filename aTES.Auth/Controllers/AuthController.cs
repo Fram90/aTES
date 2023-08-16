@@ -6,8 +6,10 @@ using System.Text;
 using aTES.Auth.ActionFilters;
 using aTES.Auth.Data;
 using aTES.Auth.Kafka;
+using aTES.Auth.Kafka.Models;
 using aTES.Auth.Models;
 using aTES.Auth.Models.Dtos;
+using aTES.Common;
 using Confluent.Kafka;
 using JWT.Algorithms;
 using JWT.Builder;
@@ -61,17 +63,25 @@ public class AuthController : ControllerBase
         {
             await _context.SaveChangesAsync();
         }
-        catch (DbUpdateException e) when(e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        catch (DbUpdateException e) when (e.InnerException is PostgresException
+                                          {
+                                              SqlState: PostgresErrorCodes.UniqueViolation
+                                          })
         {
             return BadRequest("User with same email already exists");
         }
 
-        var serializerSettings = new JsonSerializerSettings();
-        serializerSettings.Converters.Add(new StringEnumConverter(new DefaultNamingStrategy(), false));
+        var popugStreamModel = new PopugUserStreamingModel()
+        {
+            Email = user.Email,
+            Name = user.Name,
+            Role = user.Role.ToString(),
+            PublicId = user.PublicId
+        };
 
-        await _producer.ProduceAsync("stream-user-created",
+        await _producer.ProduceAsync("stream-user-lifecycle",
             new Message<Null, string>()
-                { Value = JsonConvert.SerializeObject(user, serializerSettings) });
+                { Value = BaseMessage<PopugUserStreamingModel>.Create(popugStreamModel).ToJson() });
 
         return Ok(user);
     }
@@ -89,11 +99,17 @@ public class AuthController : ControllerBase
         user.Role = model.NewRole;
         await _context.SaveChangesAsync();
 
-        var serializerSettings = new JsonSerializerSettings();
-        serializerSettings.Converters.Add(new StringEnumConverter(new DefaultNamingStrategy(), false));
+        var popugStreamModel = new PopugUserStreamingModel()
+        {
+            Email = user.Email,
+            Name = user.Name,
+            Role = user.Role.ToString(),
+            PublicId = user.PublicId
+        };
         
-        await _producer.ProduceAsync("stream-user-role-changed",
-            new Message<Null, string>() { Value = JsonConvert.SerializeObject(user, serializerSettings) });
+        await _producer.ProduceAsync("stream-user-lifecycle",
+            new Message<Null, string>()
+                { Value = BaseMessage<PopugUserStreamingModel>.Create(popugStreamModel).ToJson() });
 
         return Ok(user);
     }

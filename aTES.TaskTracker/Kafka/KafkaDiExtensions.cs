@@ -14,6 +14,5 @@ public static class KafkaDiExtensions
     public static void AddConsumers(this IServiceCollection services)
     {
         services.AddHostedService<StreamingUserChanged>();
-        services.AddHostedService<StreamingRoleChanged>();
     }
 }

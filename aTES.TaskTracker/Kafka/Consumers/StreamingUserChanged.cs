@@ -16,7 +16,7 @@ public class StreamingUserChanged : BackgroundService
         _serviceProvider = serviceProvider;
         var consumerConfig = new ConsumerConfig();
         config.GetSection("Kafka:ConsumerSettings").Bind(consumerConfig);
-        this._topic = "stream-user-created";
+        this._topic = "stream-user-lifecycle";
         this._kafkaConsumer = new ConsumerBuilder<Null, string>(consumerConfig).Build();
     }
 
@@ -40,11 +40,20 @@ public class StreamingUserChanged : BackgroundService
                 using (var scope = _serviceProvider.CreateScope())
                 {
                     var ctx = scope.ServiceProvider.GetRequiredService<TaskTrackerDbContext>();
-                
-                    ctx.Add(user);
+
+                    var existing = ctx.Users.FirstOrDefault(c => c.PublicId == user.PublicId);
+                    if (existing == null)
+                    {
+                        ctx.Add(user);
+                    }
+                    else
+                    {
+                        existing.Role = user.Role;
+                    }
+
                     ctx.SaveChanges();
                 }
-                
+
                 // Handle message...
                 Console.WriteLine($"[STREAM] Synced user with publicId: {user.PublicId}");
             }
