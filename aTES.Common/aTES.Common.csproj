@@ -8,6 +8,14 @@
 
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+      <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.12" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="SchemaRegistry\Schemas\stream.user.changed.v1.json" />
+      <Content Include="SchemaRegistry\Schemas\stream.user.changed.v1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
 
 </Project>

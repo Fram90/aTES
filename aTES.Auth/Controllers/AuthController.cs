@@ -81,7 +81,7 @@ public class AuthController : ControllerBase
 
         await _producer.ProduceAsync("stream-user-lifecycle",
             new Message<Null, string>()
-                { Value = BaseMessage<PopugUserStreamingModel>.Create(popugStreamModel).ToJson() });
+                { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
 
         return Ok(user);
     }
@@ -109,7 +109,7 @@ public class AuthController : ControllerBase
         
         await _producer.ProduceAsync("stream-user-lifecycle",
             new Message<Null, string>()
-                { Value = BaseMessage<PopugUserStreamingModel>.Create(popugStreamModel).ToJson() });
+                { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
 
         return Ok(user);
     }

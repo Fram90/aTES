@@ -1,0 +1,21 @@
+﻿{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "PublicId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "Name": {
+      "type": "string"
+    },
+    "Role": {
+      "type": "string"
+    },
+    "Email": {
+      "type": "string",
+      "format": "email"
+    }
+  },
+  "required": ["PublicId", "Name", "Role", "Email"]
+}
