@@ -22,4 +22,11 @@
         <PackageReference Include="Npgsql" Version="7.0.4" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Remove="SchemaRegistry\Schemas\stream.user.changed.v1.json" />
+      <Content Include="SchemaRegistry\Schemas\stream.user.changed.v1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
 </Project>
