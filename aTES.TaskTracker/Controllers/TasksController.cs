@@ -1,4 +1,5 @@
 using System.Runtime.Intrinsics.X86;
+using aTES.Common;
 using aTES.Common.Shared;
 using aTES.Common.Shared.Api;
 using aTES.Common.Shared.Auth;
@@ -8,6 +9,7 @@ using aTES.TaskTracker.Domain;
 using aTES.TaskTracker.Domain.Services;
 using aTES.TaskTracker.Dtos;
 using aTES.TaskTracker.Kafka;
+using aTES.TaskTracker.Kafka.Models;
 using Confluent.Kafka;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -53,17 +55,22 @@ public class TasksController : BasePopugController
         _context.Add(task);
         _context.SaveChanges();
 
-        await _kafkaDependentProducer.ProduceAsync("stream-task-created", new Message<string, string>()
+        var streamTaskModel = TaskChangedStreamingModel.FromDomain(task);
+
+        await _kafkaDependentProducer.ProduceAsync("stream-task-lifecycle", new Message<string, string>()
         {
             Key = task.PublicId.ToString(),
-            Value = JsonConvert.SerializeObject(task, _serializer)
+            Value = BaseMessage<TaskChangedStreamingModel>.Create("stream.task.changed.v1", streamTaskModel).ToJson()
         });
+
+
+        var business = TaskCreatedBusinessModel.FromDomain(task);
 
         //да, точно такое же событие. Пока не понял зачем что-то менять
         await _kafkaDependentProducer.ProduceAsync("be-task-created", new Message<string, string>()
         {
             Key = task.PublicId.ToString(),
-            Value = JsonConvert.SerializeObject(task, _serializer)
+            Value = BaseMessage<TaskCreatedBusinessModel>.Create("task.created.v1", business).ToJson()
         });
 
         return task;
@@ -80,19 +87,24 @@ public class TasksController : BasePopugController
             return Unauthorized("Ататат");
 
         task.Close();
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
-        await _kafkaDependentProducer.ProduceAsync("stream-task-closed", new Message<string, string>()
+        var streamTaskModel = TaskChangedStreamingModel.FromDomain(task);
+
+        await _kafkaDependentProducer.ProduceAsync("stream-task-lifecycle", new Message<string, string>()
         {
             Key = task.PublicId.ToString(),
-            Value = JsonConvert.SerializeObject(task, _serializer)
+            Value = BaseMessage<TaskChangedStreamingModel>.Create("stream.task.changed.v1", streamTaskModel).ToJson()
         });
+
+
+        var business = TaskClosedBusinessModel.FromDomain(task);
 
         //да, точно такое же событие. Пока не понял зачем что-то менять
         await _kafkaDependentProducer.ProduceAsync("be-task-closed", new Message<string, string>()
         {
             Key = task.PublicId.ToString(),
-            Value = JsonConvert.SerializeObject(task, _serializer)
+            Value = BaseMessage<TaskClosedBusinessModel>.Create("task.closed.v1", business).ToJson()
         });
 
         return Ok();
@@ -109,10 +121,21 @@ public class TasksController : BasePopugController
             var popug = _popugSelector.SelectNext();
             task.AssignTo(popug.PublicId);
 
+            var streamTaskModel = TaskChangedStreamingModel.FromDomain(task);
+
+            await _kafkaDependentProducer.ProduceAsync("stream-task-lifecycle", new Message<string, string>()
+            {
+                Key = task.PublicId.ToString(),
+                Value = BaseMessage<TaskChangedStreamingModel>.Create("stream.task.changed.v1", streamTaskModel)
+                    .ToJson()
+            });
+
+            var taskShuffled = TaskShuffledBusinessModel.FromDomain(task);
+
             _kafkaDependentProducer.Produce("be-task-shuffled", new Message<string, string>()
             {
                 Key = task.PublicId.ToString(),
-                Value = JsonConvert.SerializeObject(task, _serializer)
+                Value = BaseMessage<TaskShuffledBusinessModel>.Create("task.shuffled.v1", taskShuffled).ToJson()
             }, report => Console.WriteLine("Sent TaskShuffled message"));
         }
 
