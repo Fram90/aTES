@@ -1,6 +1,6 @@
 ﻿using Confluent.Kafka;
 
-namespace aTES.TaskTracker.Kafka;
+namespace aTES.Common.Shared.Kafka;
 
 /// <summary>
 ///     Leverages the injected KafkaClientHandle instance to allow

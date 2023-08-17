@@ -1,9 +1,8 @@
 ﻿using System.Security.Claims;
-using aTES.TaskTracker.Domain;
-using aTES.TaskTracker.Dtos;
+using aTES.Common.Shared.Auth;
 using Microsoft.AspNetCore.Mvc;
 
-namespace aTES.TaskTracker.Controllers;
+namespace aTES.Common.Shared.Api;
 
 public abstract class BasePopugController : ControllerBase
 {

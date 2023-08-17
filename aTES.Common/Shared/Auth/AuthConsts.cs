@@ -1,4 +1,4 @@
-﻿namespace aTES.TaskTracker.Domain;
+﻿namespace aTES.Common.Shared.Auth;
 
 public class AuthConsts
 {

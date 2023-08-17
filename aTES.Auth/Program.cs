@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using aTES.Auth.Data;
 using aTES.Auth.Kafka;
 using aTES.Auth.Models;
+using aTES.Common.Shared.Db;
 using Confluent.Kafka;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -58,24 +59,7 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 var app = builder.Build();
 
 
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    context.Database.Migrate();
-
-    if (context.Database.GetDbConnection() is NpgsqlConnection npgsqlConnection)
-    {
-        await npgsqlConnection.OpenAsync();
-        try
-        {
-            await npgsqlConnection.ReloadTypesAsync();
-        }
-        finally
-        {
-            await npgsqlConnection.CloseAsync();
-        }
-    }
-}
+await DatabaseInitializer.Init<ApplicationDbContext>(app);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
