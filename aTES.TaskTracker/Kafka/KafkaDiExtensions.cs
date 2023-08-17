@@ -1,4 +1,5 @@
-﻿using aTES.TaskTracker.Kafka.Consumers;
+﻿using aTES.Common.Shared.Kafka;
+using aTES.TaskTracker.Kafka.Consumers;
 using Confluent.Kafka;
 
 namespace aTES.TaskTracker.Kafka;

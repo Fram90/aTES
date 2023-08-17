@@ -1,6 +1,7 @@
 ﻿using Confluent.Kafka;
+using Microsoft.Extensions.Configuration;
 
-namespace aTES.TaskTracker.Kafka;
+namespace aTES.Common.Shared.Kafka;
 
 public class KafkaClientHandle : IDisposable
 {

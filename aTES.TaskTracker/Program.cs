@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using aTES.Common.Shared.Db;
 using aTES.TaskTracker.Db;
 using aTES.TaskTracker.Domain;
 using aTES.TaskTracker.Domain.Services;
@@ -63,7 +64,7 @@ builder.Services.AddConsumers();
 var app = builder.Build();
 
 
-await DatabaseInitializer.Init(app);
+await DatabaseInitializer.Init<TaskTrackerDbContext>(app);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
