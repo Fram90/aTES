@@ -1,9 +1,12 @@
 using System.Runtime.Intrinsics.X86;
+using aTES.Common.Shared;
+using aTES.Common.Shared.Api;
+using aTES.Common.Shared.Auth;
+using aTES.Common.Shared.Kafka;
 using aTES.TaskTracker.Db;
 using aTES.TaskTracker.Domain;
 using aTES.TaskTracker.Domain.Services;
 using aTES.TaskTracker.Dtos;
-using aTES.TaskTracker.Infrastructure;
 using aTES.TaskTracker.Kafka;
 using Confluent.Kafka;
 using Microsoft.AspNetCore.Authorization;

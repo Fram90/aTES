@@ -1,4 +1,5 @@
 ﻿using aTES.Auth.Models;
+using aTES.Common.Shared.Kafka;
 using Confluent.Kafka;
 
 namespace aTES.Auth.Kafka;

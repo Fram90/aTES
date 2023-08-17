@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 
-namespace aTES.TaskTracker.Infrastructure;
+namespace aTES.Common.Shared.Auth;
 
 public class MustHaveAnyRoleAttribute : ActionFilterAttribute
 {

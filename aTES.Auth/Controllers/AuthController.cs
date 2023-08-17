@@ -10,6 +10,7 @@ using aTES.Auth.Kafka.Models;
 using aTES.Auth.Models;
 using aTES.Auth.Models.Dtos;
 using aTES.Common;
+using aTES.Common.Shared.Kafka;
 using Confluent.Kafka;
 using JWT.Algorithms;
 using JWT.Builder;
