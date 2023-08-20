@@ -37,12 +37,13 @@ public class BaseMessage<TPayload>
     // актуальные версии. Но т.к. учимся на кошках, тут это просто статический класс
     public string ToJson(bool validateSchema = true)
     {
-        var serialized = JsonConvert.SerializeObject(this, SerializerSettings);
         if (validateSchema)
         {
-            SchemaRegistry.SchemaRegistry.Validate(EventName, serialized);
+            var payload = JsonConvert.SerializeObject(this.Payload, SerializerSettings);
+            SchemaRegistry.SchemaRegistry.Validate(EventName, payload);
         }
 
+        var serialized = JsonConvert.SerializeObject(this, SerializerSettings);
         return serialized;
     }
 }

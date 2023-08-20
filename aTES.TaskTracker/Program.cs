@@ -43,7 +43,7 @@ builder.Services.AddAuthentication(options =>
     {
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey (Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = false,
@@ -60,6 +60,8 @@ builder.Services.AddScoped<IPriceProvider, PriceProvider>();
 builder.Services.AddScoped<IPopugSelector, RandomPopugSelector>();
 builder.Services.AddKafkaServices();
 builder.Services.AddConsumers();
+builder.Services.AddLogging();
+builder.Services.AddSingleton<ILogger>(provider => provider.GetRequiredService<ILoggerFactory>().CreateLogger("basic"));
 
 var app = builder.Build();
 

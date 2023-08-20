@@ -20,60 +20,59 @@ namespace aTES.Accounting.Controllers;
 public class AccountingController : BasePopugController
 {
     private readonly AccountingDbContext _context;
-    private readonly IPriceProvider _priceProvider;
-    private readonly IPopugSelector _popugSelector;
     private readonly KafkaDependentProducer<string, string> _kafkaDependentProducer;
 
     private readonly JsonSerializerSettings _serializer = new();
 
-    public AccountingController(AccountingDbContext context, IPriceProvider priceProvider, IPopugSelector popugSelector,
+    public AccountingController(AccountingDbContext context,
         KafkaDependentProducer<string, string> kafkaDependentProducer)
     {
         _context = context;
-        _priceProvider = priceProvider;
-        _popugSelector = popugSelector;
         _kafkaDependentProducer = kafkaDependentProducer;
 
         _serializer.Converters.Add(new StringEnumConverter());
     }
 
-    [HttpPost("createTask")]
-    public async Task<StreamedTask> CreateTask([FromBody] CreateTaskDto model)
+
+    [HttpGet("")]
+    [ProducesResponseType(null, 404)]
+    public async Task<IActionResult> GetAccountInfo()
     {
-        var assignee = _popugSelector.SelectNext();
-
-        var chargePrice = -_priceProvider.GetTaskChargePrice();
-        var taskPaymentPrice = _priceProvider.GetTaskPaymentPrice();
-        var task = new StreamedTask(Guid.NewGuid(), model.Description, assignee.PublicId, chargePrice,
-            taskPaymentPrice);
-        _context.Add(task);
-        _context.SaveChanges();
-
-        await _kafkaDependentProducer.ProduceAsync("stream-task-created", new Message<string, string>()
+        var currentUser = GetCurrentUser();
+        var account = _context.Accounts.AsNoTracking().FirstOrDefault(x => x.PopugPublicId == currentUser.PublicId);
+        if (account == null)
         {
-            Key = task.PublicId.ToString(),
-            Value = JsonConvert.SerializeObject(task, _serializer)
-        });
+            return NotFound();
+        }
 
-        //да, точно такое же событие. Пока не понял зачем что-то менять
-        await _kafkaDependentProducer.ProduceAsync("be-task-created", new Message<string, string>()
+        var currentBillingCycle = _context.GetOrAddCurrentBillingCycle();
+        var transactions = await _context.Transactions.AsNoTracking().Where(x => x.AccountId == account.Id &&
+                                                                                 x.BillingCycleId == currentBillingCycle.Id)
+            .ToListAsync();
+
+        var balance = transactions.Sum(x => x.CreditValue) - transactions.Sum(x => x.DebitValue);
+
+        return Ok(new AccountInfo()
         {
-            Key = task.PublicId.ToString(),
-            Value = JsonConvert.SerializeObject(task, _serializer)
+            Balance = balance,
+            AuditLog = transactions.Select(x => new AuditLogItemView()
+            {
+                Description = x.Description,
+                Issued = x.Issued
+            }).ToList()
         });
-
-        return task;
     }
+}
 
+public class AccountInfo
+{
+    public string Name { get; set; }
+    public decimal Balance { get; set; }
+    public List<AuditLogItemView> AuditLog { get; set; }
+}
 
-    [HttpGet("list")]
-    public async Task<List<StreamedTask>> GetTaskList() //пейджинг для слабых. Логика в контроллере для сильных
-    {
-        var tasks = _context.Tasks.AsNoTracking()
-            .Where(x => x.PopugPublicId == GetCurrentUser().PublicId
-                        && x.Status == TaskState.Open)
-            .ToList();
-
-        return tasks;
-    }
+public class AuditLogItemView
+{
+    public DateTimeOffset Issued { get; set; }
+    public string Description { get; set; }
 }

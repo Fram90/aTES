@@ -1,4 +1,5 @@
 ﻿using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
 
 namespace aTES.Common.Shared.Kafka;
 
@@ -6,12 +7,14 @@ namespace aTES.Common.Shared.Kafka;
 ///     Leverages the injected KafkaClientHandle instance to allow
 ///     Confluent.Kafka.Message{K,V}s to be produced to Kafka.
 /// </summary>
-public class KafkaDependentProducer<K,V>
+public class KafkaDependentProducer<K, V>
 {
     IProducer<K, V> kafkaHandle;
+    private ILogger _logger;
 
-    public KafkaDependentProducer(KafkaClientHandle handle)
+    public KafkaDependentProducer(KafkaClientHandle handle, ILogger logger)
     {
+        _logger = logger;
         kafkaHandle = new DependentProducerBuilder<K, V>(handle.Handle).Build();
     }
 
@@ -20,8 +23,11 @@ public class KafkaDependentProducer<K,V>
     ///     via the returned Task. Use this method of producing if you would
     ///     like to await the result before flow of execution continues.
     /// <summary>
-    public Task ProduceAsync(string topic, Message<K, V> message)
-        => this.kafkaHandle.ProduceAsync(topic, message);
+    public async Task ProduceAsync(string topic, Message<K, V> message)
+    {
+        await this.kafkaHandle.ProduceAsync(topic, message);
+        _logger.LogInformation($"Produced message with Id {message.Key?.ToString()} to topic '{topic}'");
+    }
 
     /// <summary>
     ///     Asynchronously produce a message and expose delivery information

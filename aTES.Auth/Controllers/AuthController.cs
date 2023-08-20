@@ -84,6 +84,20 @@ public class AuthController : ControllerBase
             new Message<Null, string>()
                 { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
 
+
+        var popugCreatedModel = new PopugUserCreatedModel()
+        {
+            Email = user.Email,
+            Name = user.Name,
+            Role = user.Role.ToString(),
+            PublicId = user.PublicId
+        };
+
+        await _producer.ProduceAsync("be-user-created",
+            new Message<Null, string>()
+                { Value = BaseMessage<PopugUserCreatedModel>.Create("user.created.v1", popugCreatedModel).ToJson() });
+
+
         return Ok(user);
     }
 
@@ -107,7 +121,7 @@ public class AuthController : ControllerBase
             Role = user.Role.ToString(),
             PublicId = user.PublicId
         };
-        
+
         await _producer.ProduceAsync("stream-user-lifecycle",
             new Message<Null, string>()
                 { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
@@ -163,5 +177,25 @@ public class AuthController : ControllerBase
         var jwtToken = tokenHandler.WriteToken(token);
 
         return Ok(jwtToken);
+    }
+
+    [HttpPost("syncStreaming")]
+    public async Task Sync()
+    {
+        var users = _context.Users.AsNoTracking().ToList();
+        foreach (var user in users)
+        {
+            var popugStreamModel = new PopugUserStreamingModel()
+            {
+                Email = user.Email,
+                Name = user.Name,
+                Role = user.Role.ToString(),
+                PublicId = user.PublicId
+            };
+
+            _producer.Produce("stream-user-lifecycle",
+                new Message<Null, string>()
+                    { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
+        }
     }
 }

@@ -1,9 +1,9 @@
-﻿namespace aTES.Accounting.Db;
+﻿namespace aTES.Accounting.Kafka.Models;
 
-public class User
+public class PopugUserCreatedModel
 {
-    public int Id { get; set; }
     public Guid PublicId { get; set; }
+    public string Name { get; set; }
     public string Role { get; set; }
     public string Email { get; set; }
 }

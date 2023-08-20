@@ -55,10 +55,11 @@ builder.Services.AddAuthorization();
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddEnvironmentVariables();
 
-builder.Services.AddScoped<IPriceProvider, PriceProvider>();
-builder.Services.AddScoped<IPopugSelector, RandomPopugSelector>();
+builder.Services.AddScoped<AccountService>();
 builder.Services.AddKafkaServices();
 builder.Services.AddConsumers();
+builder.Services.AddLogging();
+builder.Services.AddSingleton<ILogger>(provider => provider.GetRequiredService<ILoggerFactory>().CreateLogger("basic"));
 
 var app = builder.Build();
 

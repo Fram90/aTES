@@ -1,25 +1,31 @@
-﻿using aTES.Accounting.Db;
-using aTES.Accounting.Kafka.StreamingModels;
-using aTES.Common;
-using Confluent.Kafka;
+﻿using Confluent.Kafka;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace aTES.Accounting.Kafka.Consumers;
+namespace aTES.Common.Shared.Kafka;
 
-public class StreamingTaskChanged : BackgroundService
+public abstract class BaseConsumer<TKey, TValue> : BackgroundService
 {
     private readonly string _topic;
-    private readonly IConsumer<Null, string> _kafkaConsumer;
+    private readonly IConsumer<TKey, string> _kafkaConsumer;
 
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger _logger;
 
-    public StreamingTaskChanged(IConfiguration config, IServiceProvider serviceProvider)
+    protected abstract void Consume(TValue value, IServiceProvider serviceProvider);
+
+    public BaseConsumer(string topicName, string consumerGroup, IConfiguration config, IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
+        _logger = serviceProvider.GetRequiredService<ILogger>();
         var consumerConfig = new ConsumerConfig();
         config.GetSection("Kafka:ConsumerSettings").Bind(consumerConfig);
-        this._topic = "stream-task-lifecycle";
-        this._kafkaConsumer = new ConsumerBuilder<Null, string>(consumerConfig).Build();
+        consumerConfig.GroupId = consumerGroup;
+        this._topic = topicName;
+        this._kafkaConsumer = new ConsumerBuilder<TKey, string>(consumerConfig).Build();
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -37,28 +43,16 @@ public class StreamingTaskChanged : BackgroundService
             {
                 var cr = this._kafkaConsumer.Consume(cancellationToken);
 
-                var task = JsonConvert.DeserializeObject<BaseMessage<TaskChangedStreamingModel>>(cr.Message.Value)!.Payload;
 
                 using (var scope = _serviceProvider.CreateScope())
                 {
-                    var ctx = scope.ServiceProvider.GetRequiredService<AccountingDbContext>();
+                    var payload = JsonConvert.DeserializeObject<BaseMessage<TValue>>(cr.Message.Value)!
+                        .Payload;
 
-                    var existing = ctx.Tasks.FirstOrDefault(c => c.PublicId == task.TaskPublicId);
-                    if (existing == null)
-                    {
-                        ctx.Add(task);
-                    }
-                    else
-                    {
-                        existing.Description = task.Description;
-                        existing.PopugPublicId = task.AssigneePublicId;
-                    }
-
-                    ctx.SaveChanges();
+                    Consume(payload, scope.ServiceProvider);
+                    var messageId = cr.Message.Key?.ToString() ?? "Null";
+                    _logger.LogInformation($"Consumed message {messageId} in topic {_topic}");
                 }
-
-                // Handle message...
-                Console.WriteLine($"[STREAM] Synced task with publicId: {task.TaskPublicId}");
             }
             catch (OperationCanceledException)
             {
@@ -67,7 +61,7 @@ public class StreamingTaskChanged : BackgroundService
             catch (ConsumeException e)
             {
                 // Consumer errors should generally be ignored (or logged) unless fatal.
-                Console.WriteLine($"Consume error: {e.Error.Reason}");
+                _logger.LogError(new EventId(), e, $"Consumer error {e}");
 
                 if (e.Error.IsFatal)
                 {
@@ -77,7 +71,7 @@ public class StreamingTaskChanged : BackgroundService
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Unexpected error: {e}");
+                _logger.LogError(new EventId(), e, $"Unexpected error: {e}");
                 break;
             }
         }

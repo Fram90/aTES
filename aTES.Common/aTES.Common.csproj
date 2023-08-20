@@ -23,8 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Remove="SchemaRegistry\Schemas\stream.user.changed.v1.json" />
-      <Content Include="SchemaRegistry\Schemas\stream.user.changed.v1.json">
+      <Content Include="SchemaRegistry\**\*">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
