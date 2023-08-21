@@ -1,0 +1,27 @@
+﻿{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "AccountPublicId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "Type": {
+      "type": "string"
+    },
+    "DebitAmount": {
+      "type": "number"
+    },
+    "CreditAmount": {
+      "type": "number"
+    },
+    "Issued": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["AccountPublicId", "Description", "Type", "DebitAmount", "CreditAmount", "Issued"]
+}

@@ -1,16 +1,10 @@
-﻿using aTES.Accounting.Db;
-using aTES.Accounting.Domain;
-using aTES.Accounting.Domain.Services;
-using aTES.Accounting.Dtos;
+﻿using aTES.Accounting.ApiModels;
+using aTES.Accounting.Db;
 using aTES.Common.Shared.Api;
 using aTES.Common.Shared.Auth;
-using aTES.Common.Shared.Kafka;
-using Confluent.Kafka;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 
 namespace aTES.Accounting.Controllers;
 
@@ -20,17 +14,10 @@ namespace aTES.Accounting.Controllers;
 public class AccountingController : BasePopugController
 {
     private readonly AccountingDbContext _context;
-    private readonly KafkaDependentProducer<string, string> _kafkaDependentProducer;
 
-    private readonly JsonSerializerSettings _serializer = new();
-
-    public AccountingController(AccountingDbContext context,
-        KafkaDependentProducer<string, string> kafkaDependentProducer)
+    public AccountingController(AccountingDbContext context)
     {
         _context = context;
-        _kafkaDependentProducer = kafkaDependentProducer;
-
-        _serializer.Converters.Add(new StringEnumConverter());
     }
 
 
@@ -55,24 +42,40 @@ public class AccountingController : BasePopugController
         return Ok(new AccountInfo()
         {
             Balance = balance,
-            AuditLog = transactions.Select(x => new AuditLogItemView()
+            Transactions = transactions.Select(x => new TransactionView()
             {
                 Description = x.Description,
                 Issued = x.Issued
             }).ToList()
         });
     }
-}
 
-public class AccountInfo
-{
-    public string Name { get; set; }
-    public decimal Balance { get; set; }
-    public List<AuditLogItemView> AuditLog { get; set; }
-}
+    /// <summary>
+    /// Получить статистику за последние forDays дней
+    /// </summary>
+    /// <param name="forDays"></param>
+    /// <returns></returns>
+    [HttpGet("stats")]
+    [MustHaveAnyRole(AuthConsts.ROLE_ACCOUNTER, AuthConsts.ROLE_ADMIN)]
+    public async Task<IActionResult> GetStats(int forDays) //ужас, но попугам и так сойдет
+    {
+        var billingCycles = _context.BillingCycles.AsNoTracking()
+            .OrderByDescending(x => x.StartDate)
+            .Include(x => x.Transactions)
+            .Take(forDays).ToList();
 
-public class AuditLogItemView
-{
-    public DateTimeOffset Issued { get; set; }
-    public string Description { get; set; }
+
+        var result = new List<DailyTotal>();
+        foreach (var billingCycle in billingCycles)
+        {
+            var dailyTotal = billingCycle.Transactions.Sum(c => c.CreditValue) - billingCycle.Transactions.Sum(c => c.DebitValue);
+            result.Add(new DailyTotal()
+            {
+                Profit = dailyTotal,
+                Date = new DateOnly(billingCycle.StartDate.Year, billingCycle.StartDate.Month, billingCycle.StartDate.Day)
+            });
+        }
+
+        return Ok(result);
+    }
 }
