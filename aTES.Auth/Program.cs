@@ -56,6 +56,10 @@ builder.Services.AddKafkaServices();
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddEnvironmentVariables();
 
+builder.Services.AddLogging();
+builder.Services.AddSingleton<ILogger>(provider => provider.GetRequiredService<ILoggerFactory>().CreateLogger("basic"));
+
+
 var app = builder.Build();
 
 

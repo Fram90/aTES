@@ -1,10 +1,10 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Serialization;
+using aTES.Accounting.Db;
+using aTES.Accounting.Domain;
+using aTES.Accounting.Domain.Services;
+using aTES.Accounting.Kafka;
 using aTES.Common.Shared.Db;
-using aTES.TaskTracker.Db;
-using aTES.TaskTracker.Domain;
-using aTES.TaskTracker.Domain.Services;
-using aTES.TaskTracker.Kafka;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -15,14 +15,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-var connectionString = builder.Configuration.GetConnectionString("TaskTrackerConnection") ??
+var connectionString = builder.Configuration.GetConnectionString("AccountingConnection") ??
                        throw new InvalidOperationException("Connection string 'AuthConnection' not found.");
 
 var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-dataSourceBuilder.MapEnum<TaskState>();
 var dataSource = dataSourceBuilder.Build();
 
-builder.Services.AddDbContext<TaskTrackerDbContext>(options =>
+builder.Services.AddDbContext<AccountingDbContext>(options =>
     options.UseNpgsql(dataSource));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -56,8 +55,7 @@ builder.Services.AddAuthorization();
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddEnvironmentVariables();
 
-builder.Services.AddScoped<IPriceProvider, PriceProvider>();
-builder.Services.AddScoped<IPopugSelector, RandomPopugSelector>();
+builder.Services.AddScoped<AccountService>();
 builder.Services.AddKafkaServices();
 builder.Services.AddConsumers();
 builder.Services.AddLogging();
@@ -66,7 +64,7 @@ builder.Services.AddSingleton<ILogger>(provider => provider.GetRequiredService<I
 var app = builder.Build();
 
 
-await DatabaseInitializer.Init<TaskTrackerDbContext>(app);
+await DatabaseInitializer.Init<AccountingDbContext>(app);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
