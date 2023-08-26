@@ -31,10 +31,7 @@ public class AccountService
         var billingCycle = _ctx.GetOrAddCurrentBillingCycle();
 
         var transaction = account.Charge(billingCycle, taskId, chargeAmount);
-        _ctx.SaveChanges();
-
-        _logger.LogInformation($"Списали средства с попуга {account.PopugPublicId} за назначение задачи {taskId}");
-
+        
         var transactionEventModel = new AccountTransactionCreated()
         {
             Type = TransactionType.Debit.ToString(),
@@ -50,6 +47,10 @@ public class AccountService
         {
             Value = BasePayload<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
         });
+        
+        _ctx.SaveChanges();
+
+        _logger.LogInformation($"Списали средства с попуга {account.PopugPublicId} за назначение задачи {taskId}");
     }
 
     public void Pay(Guid popugId, Guid taskId, decimal payAmount)
@@ -64,9 +65,6 @@ public class AccountService
         var billingCycle = _ctx.GetOrAddCurrentBillingCycle();
 
         var transaction = account.Pay(billingCycle, taskId, payAmount);
-        _ctx.SaveChanges();
-
-        _logger.LogInformation($"Зачислили средства попугу {account.PopugPublicId} за выполнение задачи {taskId}");
 
         var transactionEventModel = new AccountTransactionCreated()
         {
@@ -83,5 +81,8 @@ public class AccountService
         {
             Value = BasePayload<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
         });
+        
+        _ctx.SaveChanges();
+        _logger.LogInformation($"Зачислили средства попугу {account.PopugPublicId} за выполнение задачи {taskId}");
     }
 }
