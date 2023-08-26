@@ -10,9 +10,9 @@ public class AccountService
 {
     private readonly AccountingDbContext _ctx;
     private readonly ILogger _logger;
-    private readonly KafkaDependentProducer<Null, string> _producer;
+    private readonly KafkaDependentProducer<string, string> _producer;
 
-    public AccountService(AccountingDbContext ctx, ILogger logger, KafkaDependentProducer<Null, string> producer)
+    public AccountService(AccountingDbContext ctx, ILogger logger, KafkaDependentProducer<string, string> producer)
     {
         this._ctx = ctx;
         _logger = logger;
@@ -45,7 +45,7 @@ public class AccountService
             AccountPublicId = account.PopugPublicId
         };
 
-        _producer.Produce("be-account-transaction-created", new Message<Null, string>()
+        _producer.Produce("be-account-transaction-created", new Message<string, string>()
         {
             Value = BaseMessage<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
         });
@@ -77,7 +77,7 @@ public class AccountService
             AccountPublicId = account.PopugPublicId
         };
 
-        _producer.Produce("be-account-transaction-created", new Message<Null, string>()
+        _producer.Produce("be-account-transaction-created", new Message<string, string>()
         {
             Value = BaseMessage<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
         });

@@ -12,7 +12,7 @@ public class PopugTransaction
     public int BillingCycleId { get; private set; }
     public DateTimeOffset Issued { get; private set; }
 
-    public virtual Account OwnerAccount { get; private set; }
+    public virtual Account Account { get; private set; }
     public virtual BillingCycle BillingCycle { get; private set; }
 
     private PopugTransaction()

@@ -66,6 +66,7 @@ builder.Services.AddScheduler();
 var app = builder.Build();
 
 app.Services.UseScheduler(scheduler => scheduler.Schedule<CloseBillingCycleJob>().DailyAt(0, 0));
+app.RunOutboxPublisher<AccountingDbContext>();
 
 await DatabaseInitializer.Init<AccountingDbContext>(app);
 

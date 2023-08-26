@@ -23,10 +23,10 @@ public class AuthController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
-    private readonly KafkaDependentProducer<Null, string> _producer;
+    private readonly KafkaDependentProducer<string, string> _producer;
 
     public AuthController(ApplicationDbContext context, IConfiguration configuration,
-        KafkaDependentProducer<Null, string> producer)
+        KafkaDependentProducer<string, string> producer)
     {
         _context = context;
         _configuration = configuration;
@@ -49,18 +49,6 @@ public class AuthController : ControllerBase
 
         _context.Users.Add(user);
 
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateException e) when (e.InnerException is PostgresException
-                                          {
-                                              SqlState: PostgresErrorCodes.UniqueViolation
-                                          })
-        {
-            return BadRequest("User with same email already exists");
-        }
-
         var popugStreamModel = new PopugUserStreamingModel()
         {
             Email = user.Email,
@@ -69,8 +57,8 @@ public class AuthController : ControllerBase
             PublicId = user.PublicId
         };
 
-        await _producer.ProduceAsync("stream-user-lifecycle",
-            new Message<Null, string>()
+        _context.Produce("stream-user-lifecycle",
+            new Message<string, string>()
                 { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
 
 
@@ -82,10 +70,21 @@ public class AuthController : ControllerBase
             PublicId = user.PublicId
         };
 
-        await _producer.ProduceAsync("be-user-created",
-            new Message<Null, string>()
+        _context.Produce("be-user-created",
+            new Message<string, string>()
                 { Value = BaseMessage<PopugUserCreatedModel>.Create("user.created.v1", popugCreatedModel).ToJson() });
 
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException e) when (e.InnerException is PostgresException
+                                          {
+                                              SqlState: PostgresErrorCodes.UniqueViolation
+                                          })
+        {
+            return BadRequest("User with same email already exists");
+        }
 
         return Ok(user);
     }
@@ -101,7 +100,6 @@ public class AuthController : ControllerBase
         }
 
         user.Role = model.NewRole;
-        await _context.SaveChangesAsync();
 
         var popugStreamModel = new PopugUserStreamingModel()
         {
@@ -111,9 +109,11 @@ public class AuthController : ControllerBase
             PublicId = user.PublicId
         };
 
-        await _producer.ProduceAsync("stream-user-lifecycle",
-            new Message<Null, string>()
+        _context.Produce("stream-user-lifecycle",
+            new Message<string, string>()
                 { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
+
+        await _context.SaveChangesAsync();
 
         return Ok(user);
     }
@@ -183,7 +183,7 @@ public class AuthController : ControllerBase
             };
 
             _producer.Produce("stream-user-lifecycle",
-                new Message<Null, string>()
+                new Message<string, string>()
                     { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
         }
     }

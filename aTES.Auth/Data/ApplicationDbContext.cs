@@ -1,11 +1,10 @@
 ﻿using aTES.Auth.Models;
+using aTES.Common.Shared.Db;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Storage.Internal.Mapping;
 
 namespace aTES.Auth.Data;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext : OutboxContext<ApplicationDbContext>
 {
     public DbSet<PopugUser> Users { get; set; }
 
