@@ -1,29 +1,18 @@
-﻿using System.Buffers.Text;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using aTES.Auth.ActionFilters;
 using aTES.Auth.Data;
-using aTES.Auth.Kafka;
 using aTES.Auth.Kafka.Models;
 using aTES.Auth.Models;
 using aTES.Auth.Models.Dtos;
 using aTES.Common;
 using aTES.Common.Shared.Kafka;
 using Confluent.Kafka;
-using JWT.Algorithms;
-using JWT.Builder;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 using Npgsql;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
 
 namespace aTES.Auth.Controllers;
@@ -46,7 +35,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("register")]
     [ServiceFilter(typeof(ValidationFilterAttribute))]
-    [ProducesResponseType(201)]
+    [ProducesResponseType(typeof(PopugUserCreatedModel), 201)]
     public async Task<IActionResult> RegisterUser([FromBody] UserRegistrationDto userRegistration)
     {
         var user = new PopugUser()

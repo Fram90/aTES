@@ -21,8 +21,12 @@ public class AccountingController : BasePopugController
     }
 
 
+    /// <summary>
+    /// Получить реущую инфу по аккаунту. Баланс, транзакции
+    /// </summary>
+    /// <returns></returns>
     [HttpGet("")]
-    [ProducesResponseType(null, 404)]
+    [ProducesResponseType(typeof(AccountInfo), 200)]
     public async Task<IActionResult> GetAccountInfo()
     {
         var currentUser = GetCurrentUser();
@@ -57,6 +61,7 @@ public class AccountingController : BasePopugController
     /// <returns></returns>
     [HttpGet("stats")]
     [MustHaveAnyRole(AuthConsts.ROLE_ACCOUNTER, AuthConsts.ROLE_ADMIN)]
+    [ProducesResponseType(typeof(List<DailyTotal>), 200)]
     public async Task<IActionResult> GetStats(int forDays) //ужас, но попугам и так сойдет
     {
         var billingCycles = _context.BillingCycles.AsNoTracking()

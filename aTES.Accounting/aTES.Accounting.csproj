@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <PackageReference Include="Confluent.Kafka" Version="2.2.0" />
+        <PackageReference Include="Coravel" Version="5.0.2" />
         <PackageReference Include="Dapper" Version="2.0.143" />
         <PackageReference Include="EFCore.NamingConventions" Version="7.0.2" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.9" />

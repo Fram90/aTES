@@ -61,7 +61,8 @@ public class BillingCycle
 public enum TransactionType
 {
     Credit,
-    Debit
+    Debit,
+    BillingCycleClose
 }
 
 public enum BillingCycleStatus

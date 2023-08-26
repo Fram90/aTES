@@ -1,14 +1,14 @@
 ﻿using System.Text;
 using System.Text.Json.Serialization;
+using aTES.Accounting.BillingCycleProcessing;
 using aTES.Accounting.Db;
-using aTES.Accounting.Domain;
 using aTES.Accounting.Domain.Services;
 using aTES.Accounting.Kafka;
 using aTES.Common.Shared.Db;
+using Coravel;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -61,8 +61,11 @@ builder.Services.AddConsumers();
 builder.Services.AddLogging();
 builder.Services.AddSingleton<ILogger>(provider => provider.GetRequiredService<ILoggerFactory>().CreateLogger("basic"));
 
+builder.Services.AddScheduler();
+
 var app = builder.Build();
 
+app.Services.UseScheduler(scheduler => scheduler.Schedule<CloseBillingCycleJob>().DailyAt(0, 0));
 
 await DatabaseInitializer.Init<AccountingDbContext>(app);
 
