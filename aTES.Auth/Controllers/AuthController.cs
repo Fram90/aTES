@@ -59,7 +59,7 @@ public class AuthController : ControllerBase
 
         _context.Produce("stream-user-lifecycle",
             new Message<string, string>()
-                { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
+                { Value = BasePayload<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
 
 
         var popugCreatedModel = new PopugUserCreatedModel()
@@ -72,7 +72,7 @@ public class AuthController : ControllerBase
 
         _context.Produce("be-user-created",
             new Message<string, string>()
-                { Value = BaseMessage<PopugUserCreatedModel>.Create("user.created.v1", popugCreatedModel).ToJson() });
+                { Value = BasePayload<PopugUserCreatedModel>.Create("user.created.v1", popugCreatedModel).ToJson() });
 
         try
         {
@@ -111,7 +111,7 @@ public class AuthController : ControllerBase
 
         _context.Produce("stream-user-lifecycle",
             new Message<string, string>()
-                { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
+                { Value = BasePayload<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
 
         await _context.SaveChangesAsync();
 
@@ -184,7 +184,7 @@ public class AuthController : ControllerBase
 
             _producer.Produce("stream-user-lifecycle",
                 new Message<string, string>()
-                    { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
+                    { Value = BasePayload<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
         }
     }
 }

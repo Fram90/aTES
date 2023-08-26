@@ -42,12 +42,13 @@ public class AccountService
             Issued = transaction.Issued,
             CreditAmount = transaction.CreditValue,
             DebitAmount = transaction.DebitValue,
-            AccountPublicId = account.PopugPublicId
+            AccountPublicId = account.PopugPublicId,
+            TransactionId = transaction.PublicId
         };
 
         _producer.Produce("be-account-transaction-created", new Message<string, string>()
         {
-            Value = BaseMessage<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
+            Value = BasePayload<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
         });
     }
 
@@ -74,12 +75,13 @@ public class AccountService
             Issued = transaction.Issued,
             CreditAmount = transaction.CreditValue,
             DebitAmount = transaction.DebitValue,
-            AccountPublicId = account.PopugPublicId
+            AccountPublicId = account.PopugPublicId,
+            TransactionId = transaction.PublicId
         };
 
         _producer.Produce("be-account-transaction-created", new Message<string, string>()
         {
-            Value = BaseMessage<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
+            Value = BasePayload<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
         });
     }
 }

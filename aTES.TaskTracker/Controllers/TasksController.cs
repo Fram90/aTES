@@ -1,6 +1,4 @@
-using System.Runtime.Intrinsics.X86;
 using aTES.Common;
-using aTES.Common.Shared;
 using aTES.Common.Shared.Api;
 using aTES.Common.Shared.Auth;
 using aTES.Common.Shared.Kafka;
@@ -8,7 +6,6 @@ using aTES.TaskTracker.Db;
 using aTES.TaskTracker.Domain;
 using aTES.TaskTracker.Domain.Services;
 using aTES.TaskTracker.Dtos;
-using aTES.TaskTracker.Kafka;
 using aTES.TaskTracker.Kafka.Models;
 using Confluent.Kafka;
 using Microsoft.AspNetCore.Authorization;
@@ -56,22 +53,13 @@ public class TasksController : BasePopugController
         _context.SaveChanges();
 
         var streamTaskModel = TaskChangedStreamingModel.FromDomain(task);
-
-        await _kafkaDependentProducer.ProduceAsync("stream-task-lifecycle", new Message<string, string>()
-        {
-            Key = task.PublicId.ToString(),
-            Value = BaseMessage<TaskChangedStreamingModel>.Create("stream.task.changed.v1", streamTaskModel).ToJson()
-        });
-
+        var taskChangedEvent = BaseMessage<TaskChangedStreamingModel>.Create(Guid.NewGuid().ToString(), "stream.task.changed.v1", streamTaskModel);
+        _context.Produce("stream-task-lifecycle", taskChangedEvent);
 
         var business = TaskCreatedBusinessModel.FromDomain(task);
-
+        var taskCreatedEvent = BaseMessage<TaskCreatedBusinessModel>.Create(Guid.NewGuid().ToString(), "task.created.v1", business);
         //да, точно такое же событие. Пока не понял зачем что-то менять
-        await _kafkaDependentProducer.ProduceAsync("be-task-created", new Message<string, string>()
-        {
-            Key = task.PublicId.ToString(),
-            Value = BaseMessage<TaskCreatedBusinessModel>.Create("task.created.v1", business).ToJson()
-        });
+        _context.Produce("be-task-created", taskCreatedEvent);
 
         return task;
     }
@@ -90,22 +78,13 @@ public class TasksController : BasePopugController
         await _context.SaveChangesAsync();
 
         var streamTaskModel = TaskChangedStreamingModel.FromDomain(task);
-
-        await _kafkaDependentProducer.ProduceAsync("stream-task-lifecycle", new Message<string, string>()
-        {
-            Key = task.PublicId.ToString(),
-            Value = BaseMessage<TaskChangedStreamingModel>.Create("stream.task.changed.v1", streamTaskModel).ToJson()
-        });
-
-
-        var business = TaskClosedBusinessModel.FromDomain(task);
+        var streamEvent = BaseMessage<TaskChangedStreamingModel>.Create(Guid.NewGuid().ToString(), "stream.task.changed.v1", streamTaskModel);
+        _context.Produce("stream-task-lifecycle", streamEvent);
 
         //да, точно такое же событие. Пока не понял зачем что-то менять
-        await _kafkaDependentProducer.ProduceAsync("be-task-closed", new Message<string, string>()
-        {
-            Key = task.PublicId.ToString(),
-            Value = BaseMessage<TaskClosedBusinessModel>.Create("task.closed.v1", business).ToJson()
-        });
+        var business = TaskClosedBusinessModel.FromDomain(task);
+        var beTaskClosedEvent = BaseMessage<TaskClosedBusinessModel>.Create(Guid.NewGuid().ToString(), "task.closed.v1", business);
+        _context.Produce("be-task-closed", beTaskClosedEvent);
 
         return Ok();
     }
@@ -126,7 +105,7 @@ public class TasksController : BasePopugController
             await _kafkaDependentProducer.ProduceAsync("stream-task-lifecycle", new Message<string, string>()
             {
                 Key = task.PublicId.ToString(),
-                Value = BaseMessage<TaskChangedStreamingModel>.Create("stream.task.changed.v1", streamTaskModel)
+                Value = BasePayload<TaskChangedStreamingModel>.Create("stream.task.changed.v1", streamTaskModel)
                     .ToJson()
             });
 
@@ -135,7 +114,7 @@ public class TasksController : BasePopugController
             _kafkaDependentProducer.Produce("be-task-shuffled", new Message<string, string>()
             {
                 Key = task.PublicId.ToString(),
-                Value = BaseMessage<TaskShuffledBusinessModel>.Create("task.shuffled.v1", taskShuffled).ToJson()
+                Value = BasePayload<TaskShuffledBusinessModel>.Create("task.shuffled.v1", taskShuffled).ToJson()
             }, report => Console.WriteLine("Sent TaskShuffled message"));
         }
 

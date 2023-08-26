@@ -3,6 +3,7 @@
 public class PopugTransaction
 {
     public int Id { get; private set; }
+    public Guid PublicId { get; private set; }
     public int AccountId { get; private set; }
     public string Description { get; private set; }
     public TransactionType Type { get; private set; }
@@ -22,6 +23,7 @@ public class PopugTransaction
     public PopugTransaction(int accountId, string description, TransactionType type, decimal creditValue,
         decimal debitValue, int billingCycleId, DateTimeOffset issued)
     {
+        PublicId = Guid.NewGuid();
         AccountId = accountId;
         Description = description;
         Type = type;

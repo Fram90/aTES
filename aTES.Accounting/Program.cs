@@ -62,6 +62,7 @@ builder.Services.AddLogging();
 builder.Services.AddSingleton<ILogger>(provider => provider.GetRequiredService<ILoggerFactory>().CreateLogger("basic"));
 
 builder.Services.AddScheduler();
+builder.Services.AddScoped<CloseBillingCycleJob>();
 
 var app = builder.Build();
 

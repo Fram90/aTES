@@ -3,6 +3,7 @@
 public class DailySalarySender
 {
     private readonly ILogger _logger;
+    
 
     public DailySalarySender(ILogger logger)
     {
