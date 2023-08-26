@@ -1,14 +1,12 @@
 ﻿using System.Text;
 using System.Text.Json.Serialization;
 using aTES.Auth.ActionFilters;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using aTES.Auth.Data;
 using aTES.Auth.Kafka;
 using aTES.Auth.Models;
 using aTES.Common.Shared.Db;
-using Confluent.Kafka;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 
@@ -59,9 +57,10 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 builder.Services.AddLogging();
 builder.Services.AddSingleton<ILogger>(provider => provider.GetRequiredService<ILoggerFactory>().CreateLogger("basic"));
 
+builder.Services.AddOutboxPublisher<ApplicationDbContext>();
 
 var app = builder.Build();
-
+app.RunOutboxPublisher<ApplicationDbContext>();
 
 await DatabaseInitializer.Init<ApplicationDbContext>(app);
 

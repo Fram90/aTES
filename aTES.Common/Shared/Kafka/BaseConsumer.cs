@@ -46,7 +46,7 @@ public abstract class BaseConsumer<TKey, TValue> : BackgroundService
 
                 using (var scope = _serviceProvider.CreateScope())
                 {
-                    var payload = JsonConvert.DeserializeObject<BaseMessage<TValue>>(cr.Message.Value)!
+                    var payload = JsonConvert.DeserializeObject<BasePayload<TValue>>(cr.Message.Value)!
                         .Payload;
 
                     Consume(payload, scope.ServiceProvider);

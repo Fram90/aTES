@@ -10,9 +10,9 @@ public class AccountService
 {
     private readonly AccountingDbContext _ctx;
     private readonly ILogger _logger;
-    private readonly KafkaDependentProducer<Null, string> _producer;
+    private readonly KafkaDependentProducer<string, string> _producer;
 
-    public AccountService(AccountingDbContext ctx, ILogger logger, KafkaDependentProducer<Null, string> producer)
+    public AccountService(AccountingDbContext ctx, ILogger logger, KafkaDependentProducer<string, string> producer)
     {
         this._ctx = ctx;
         _logger = logger;
@@ -31,10 +31,7 @@ public class AccountService
         var billingCycle = _ctx.GetOrAddCurrentBillingCycle();
 
         var transaction = account.Charge(billingCycle, taskId, chargeAmount);
-        _ctx.SaveChanges();
-
-        _logger.LogInformation($"Списали средства с попуга {account.PopugPublicId} за назначение задачи {taskId}");
-
+        
         var transactionEventModel = new AccountTransactionCreated()
         {
             Type = TransactionType.Debit.ToString(),
@@ -42,13 +39,18 @@ public class AccountService
             Issued = transaction.Issued,
             CreditAmount = transaction.CreditValue,
             DebitAmount = transaction.DebitValue,
-            AccountPublicId = account.PopugPublicId
+            AccountPublicId = account.PopugPublicId,
+            TransactionId = transaction.PublicId
         };
 
-        _producer.Produce("be-account-transaction-created", new Message<Null, string>()
+        _producer.Produce("be-account-transaction-created", new Message<string, string>()
         {
-            Value = BaseMessage<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
+            Value = BasePayload<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
         });
+        
+        _ctx.SaveChanges();
+
+        _logger.LogInformation($"Списали средства с попуга {account.PopugPublicId} за назначение задачи {taskId}");
     }
 
     public void Pay(Guid popugId, Guid taskId, decimal payAmount)
@@ -63,9 +65,6 @@ public class AccountService
         var billingCycle = _ctx.GetOrAddCurrentBillingCycle();
 
         var transaction = account.Pay(billingCycle, taskId, payAmount);
-        _ctx.SaveChanges();
-
-        _logger.LogInformation($"Зачислили средства попугу {account.PopugPublicId} за выполнение задачи {taskId}");
 
         var transactionEventModel = new AccountTransactionCreated()
         {
@@ -74,12 +73,16 @@ public class AccountService
             Issued = transaction.Issued,
             CreditAmount = transaction.CreditValue,
             DebitAmount = transaction.DebitValue,
-            AccountPublicId = account.PopugPublicId
+            AccountPublicId = account.PopugPublicId,
+            TransactionId = transaction.PublicId
         };
 
-        _producer.Produce("be-account-transaction-created", new Message<Null, string>()
+        _producer.Produce("be-account-transaction-created", new Message<string, string>()
         {
-            Value = BaseMessage<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
+            Value = BasePayload<AccountTransactionCreated>.Create("account.transaction.created.v1", transactionEventModel).ToJson()
         });
+        
+        _ctx.SaveChanges();
+        _logger.LogInformation($"Зачислили средства попугу {account.PopugPublicId} за выполнение задачи {taskId}");
     }
 }

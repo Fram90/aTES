@@ -1,11 +1,11 @@
-﻿using System.Runtime.Intrinsics.X86;
+﻿using aTES.Common.Shared.Db;
 using aTES.TaskTracker.Domain;
 using Microsoft.EntityFrameworkCore;
 using Task = aTES.TaskTracker.Domain.Task;
 
 namespace aTES.TaskTracker.Db;
 
-public class TaskTrackerDbContext : DbContext
+public class TaskTrackerDbContext : OutboxContext<TaskTrackerDbContext>
 {
     public DbSet<Task> Tasks { get; set; }
     public DbSet<User> Users { get; set; }

@@ -8,7 +8,6 @@ using aTES.TaskTracker.Kafka;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -63,8 +62,11 @@ builder.Services.AddConsumers();
 builder.Services.AddLogging();
 builder.Services.AddSingleton<ILogger>(provider => provider.GetRequiredService<ILoggerFactory>().CreateLogger("basic"));
 
+builder.Services.AddOutboxPublisher<TaskTrackerDbContext>();
+
 var app = builder.Build();
 
+app.RunOutboxPublisher<TaskTrackerDbContext>();
 
 await DatabaseInitializer.Init<TaskTrackerDbContext>(app);
 

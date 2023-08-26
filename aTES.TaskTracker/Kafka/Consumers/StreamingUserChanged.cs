@@ -7,7 +7,7 @@ namespace aTES.TaskTracker.Kafka.Consumers;
 public class StreamingUserChanged : BackgroundService
 {
     private readonly string _topic;
-    private readonly IConsumer<Null, string> _kafkaConsumer;
+    private readonly IConsumer<string, string> _kafkaConsumer;
 
     private readonly IServiceProvider _serviceProvider;
 
@@ -17,7 +17,7 @@ public class StreamingUserChanged : BackgroundService
         var consumerConfig = new ConsumerConfig();
         config.GetSection("Kafka:ConsumerSettings").Bind(consumerConfig);
         this._topic = "stream-user-lifecycle";
-        this._kafkaConsumer = new ConsumerBuilder<Null, string>(consumerConfig).Build();
+        this._kafkaConsumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

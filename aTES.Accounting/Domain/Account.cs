@@ -7,6 +7,13 @@ public class Account
 
     public List<PopugTransaction> Transactions { get; set; }
 
+    public decimal GetBalanceForCycle(int billingCycleId)
+    {
+        var currentCycleTransactions = Transactions.Where(x => x.BillingCycleId == billingCycleId).ToList();
+        var total = currentCycleTransactions.Sum(x => x.CreditValue) - currentCycleTransactions.Sum(x => x.DebitValue);
+        return total;
+    }
+
     public void Charge()
     {
     }
@@ -24,6 +31,18 @@ public class Account
     {
         var transaction = new PopugTransaction(Id, $"Начисление средств за выполнение задачи {taskId}",
             TransactionType.Credit, paymentAmount, 0, billingCycle.Id, DateTimeOffset.UtcNow);
+        Transactions.Add(transaction);
+
+        return transaction;
+    }
+
+    public PopugTransaction CloseCycle(int billingCycleId)
+    {
+        var total = GetBalanceForCycle(billingCycleId);
+        var credit = total > 0 ? total : 0;
+        var debit = total < 0 ? total : 0;
+
+        var transaction = new PopugTransaction(Id, $"Закрытие биллинг цикла", TransactionType.BillingCycleClose, credit, debit, billingCycleId, DateTimeOffset.UtcNow);
         Transactions.Add(transaction);
 
         return transaction;

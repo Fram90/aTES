@@ -1,29 +1,18 @@
-﻿using System.Buffers.Text;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using aTES.Auth.ActionFilters;
 using aTES.Auth.Data;
-using aTES.Auth.Kafka;
 using aTES.Auth.Kafka.Models;
 using aTES.Auth.Models;
 using aTES.Auth.Models.Dtos;
 using aTES.Common;
 using aTES.Common.Shared.Kafka;
 using Confluent.Kafka;
-using JWT.Algorithms;
-using JWT.Builder;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 using Npgsql;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
 
 namespace aTES.Auth.Controllers;
@@ -34,10 +23,10 @@ public class AuthController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
-    private readonly KafkaDependentProducer<Null, string> _producer;
+    private readonly KafkaDependentProducer<string, string> _producer;
 
     public AuthController(ApplicationDbContext context, IConfiguration configuration,
-        KafkaDependentProducer<Null, string> producer)
+        KafkaDependentProducer<string, string> producer)
     {
         _context = context;
         _configuration = configuration;
@@ -46,7 +35,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("register")]
     [ServiceFilter(typeof(ValidationFilterAttribute))]
-    [ProducesResponseType(201)]
+    [ProducesResponseType(typeof(PopugUserCreatedModel), 201)]
     public async Task<IActionResult> RegisterUser([FromBody] UserRegistrationDto userRegistration)
     {
         var user = new PopugUser()
@@ -60,6 +49,31 @@ public class AuthController : ControllerBase
 
         _context.Users.Add(user);
 
+        var popugStreamModel = new PopugUserStreamingModel()
+        {
+            Email = user.Email,
+            Name = user.Name,
+            Role = user.Role.ToString(),
+            PublicId = user.PublicId
+        };
+
+        _context.Produce("stream-user-lifecycle",
+            new Message<string, string>()
+                { Value = BasePayload<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
+
+
+        var popugCreatedModel = new PopugUserCreatedModel()
+        {
+            Email = user.Email,
+            Name = user.Name,
+            Role = user.Role.ToString(),
+            PublicId = user.PublicId
+        };
+
+        _context.Produce("be-user-created",
+            new Message<string, string>()
+                { Value = BasePayload<PopugUserCreatedModel>.Create("user.created.v1", popugCreatedModel).ToJson() });
+
         try
         {
             await _context.SaveChangesAsync();
@@ -71,32 +85,6 @@ public class AuthController : ControllerBase
         {
             return BadRequest("User with same email already exists");
         }
-
-        var popugStreamModel = new PopugUserStreamingModel()
-        {
-            Email = user.Email,
-            Name = user.Name,
-            Role = user.Role.ToString(),
-            PublicId = user.PublicId
-        };
-
-        await _producer.ProduceAsync("stream-user-lifecycle",
-            new Message<Null, string>()
-                { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
-
-
-        var popugCreatedModel = new PopugUserCreatedModel()
-        {
-            Email = user.Email,
-            Name = user.Name,
-            Role = user.Role.ToString(),
-            PublicId = user.PublicId
-        };
-
-        await _producer.ProduceAsync("be-user-created",
-            new Message<Null, string>()
-                { Value = BaseMessage<PopugUserCreatedModel>.Create("user.created.v1", popugCreatedModel).ToJson() });
-
 
         return Ok(user);
     }
@@ -112,7 +100,6 @@ public class AuthController : ControllerBase
         }
 
         user.Role = model.NewRole;
-        await _context.SaveChangesAsync();
 
         var popugStreamModel = new PopugUserStreamingModel()
         {
@@ -122,9 +109,11 @@ public class AuthController : ControllerBase
             PublicId = user.PublicId
         };
 
-        await _producer.ProduceAsync("stream-user-lifecycle",
-            new Message<Null, string>()
-                { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
+        _context.Produce("stream-user-lifecycle",
+            new Message<string, string>()
+                { Value = BasePayload<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
+
+        await _context.SaveChangesAsync();
 
         return Ok(user);
     }
@@ -194,8 +183,8 @@ public class AuthController : ControllerBase
             };
 
             _producer.Produce("stream-user-lifecycle",
-                new Message<Null, string>()
-                    { Value = BaseMessage<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
+                new Message<string, string>()
+                    { Value = BasePayload<PopugUserStreamingModel>.Create("stream.user.changed.v1", popugStreamModel).ToJson() });
         }
     }
 }
